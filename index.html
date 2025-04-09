@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pronunciation Coach</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 10px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 80px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 5px;
+            margin-bottom: 10px;
+            width: 100%;
+            min-height: 44px;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #recordingIndicator {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff5252, #ff7675);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,82,82,0.3); }
+            50% { transform: scale(1.02); box-shadow: 0 8px 25px rgba(255,82,82,0.4); }
+            100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,82,82,0.3); }
+        }
+
+        #results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+        }
+
+        .accuracy-meter {
+            margin: 15px 0;
+        }
+
+        .meter-bar {
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .meter-progress {
+            height: 100%;
+            background: #2ecc71;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 600px) {
+            #recordingIndicator {
+                animation: none;
+                padding: 15px;
+                font-size: 16px;
+            }
+        }
+
+        /* Desktop adjustments */
+        @media (min-width: 600px) {
+            .container {
+                max-width: 800px;
+                margin: 20px auto;
+                padding: 25px;
+            }
+
+            .button-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .button-group button {
+                width: auto;
+                flex: 1;
+                min-width: 120px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Pronunciation Coach</h1>
+
+        <div class="control-group">
+            <label for="language">Language:</label>
+            <select id="language">
+                <option value="en">English</option>
+                <option value="ar">Arabic</option>
+            </select>
+            <button onclick="setLanguage()">Set Language</button>
+        </div>
+
+        <div class="control-group">
+            <label for="practiceText">Practice Text:</label>
+            <textarea id="practiceText" placeholder="Enter the text you want to practice..."></textarea>
+
+            <div class="button-group">
+                <button id="recordBtn" onclick="startRecording()">🎤 Record & Analyze</button>
+                <button id="playTargetBtn" onclick="playAudio('Target')" disabled>▶️ Target</button>
+                <button id="playRecordingBtn" onclick="playAudio('Your Recording')" disabled>▶️ Your Voice</button>
+            </div>
+
+            <div id="recordingIndicator">
+                <div>🎙️ RECORDING IN PROGRESS</div>
+                <div>Speak clearly into your microphone</div>
+                <div id="countdown" style="font-size: 24px; margin-top: 10px;">5</div>
+            </div>
+        </div>
+
+        <div id="results">
+            <h3>Results</h3>
+
+            <div class="result-item">
+                <strong>Target:</strong> <span id="targetText"></span>
+            </div>
+
+            <div class="result-item">
+                <strong>You said:</strong> <span id="userText"></span>
+            </div>
+
+            <div class="accuracy-meter">
+                <div><strong>Accuracy:</strong> <span id="accuracyValue">0</span>%</div>
+                <div class="meter-bar">
+                    <div id="accuracyProgress" class="meter-progress"></div>
+                </div>
+            </div>
+
+            <div id="feedback" style="padding: 15px; background: white; border-radius: 5px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlayback = null;
+        let currentAudioUrls = {
+            target: null,
+            recording: null
+        };
+
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function setLanguage() {
+            const language = document.getElementById('language').value;
+            const button = document.querySelector('button[onclick="setLanguage()"]');
+            button.disabled = true;
+            button.textContent = 'Setting...';
+
+            fetch('/set_language', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ language })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    alert(`Language set to ${data.language === 'en' ? 'English' : 'Arabic'}`);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Failed to set language. Please try again.');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = 'Set Language';
+            });
+        }
+
+        function startRecording() {
+            if (isMobileDevice()) {
+                if (!confirm("On mobile devices, you'll need to allow microphone access. Continue?")) {
+                    return;
+                }
+            }
+
+            proceedWithRecording();
+        }
+
+        function proceedWithRecording() {
+            const text = document.getElementById('practiceText').value.trim();
+            if(!text) {
+                alert('Please enter text to practice');
+                return;
+            }
+
+            const recordBtn = document.getElementById('recordBtn');
+            const indicator = document.getElementById('recordingIndicator');
+            const countdown = document.getElementById('countdown');
+
+            // Show recording indicator and disable button
+            recordBtn.disabled = true;
+            recordBtn.textContent = 'Recording...';
+            indicator.style.display = 'block';
+
+            // Start countdown from 5
+            let seconds = 5;
+            countdown.textContent = seconds;
+            const countdownInterval = setInterval(() => {
+                seconds--;
+                countdown.textContent = seconds;
+                if(seconds <= 0) clearInterval(countdownInterval);
+            }, 1000);
+
+            fetch('/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            })
+            .then(response => {
+                if(!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                clearInterval(countdownInterval);
+                indicator.style.display = 'none';
+                recordBtn.disabled = false;
+                recordBtn.textContent = '🎤 Record & Analyze';
+
+                if(data.status === 'success') {
+                    showResults(data);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                clearInterval(countdownInterval);
+                indicator.style.display = 'none';
+                recordBtn.disabled = false;
+                recordBtn.textContent = '🎤 Record & Analyze';
+                alert('Recording failed. Please try again.');
+            });
+        }
+
+        function showResults(data) {
+            document.getElementById('targetText').textContent = data.target_text;
+            document.getElementById('userText').textContent = data.user_text;
+            document.getElementById('accuracyValue').textContent = data.accuracy.toFixed(1);
+
+            // Animate progress bar
+            const progressBar = document.getElementById('accuracyProgress');
+            progressBar.style.width = '0%';
+            setTimeout(() => {
+                progressBar.style.width = `${data.accuracy}%`;
+                // Change color based on accuracy
+                if (data.accuracy > 70) {
+                    progressBar.style.backgroundColor = '#2ecc71'; // Green
+                } else if (data.accuracy > 40) {
+                    progressBar.style.backgroundColor = '#f39c12'; // Orange
+                } else {
+                    progressBar.style.backgroundColor = '#e74c3c'; // Red
+                }
+            }, 100);
+
+            document.getElementById('feedback').innerHTML = data.feedback.replace(/\n/g, '<br>');
+
+            // Store audio URLs
+            currentAudioUrls = {
+                target: data.correct_pronunciation_url,
+                recording: data.recording_url
+            };
+
+            // Enable playback buttons
+            document.getElementById('playTargetBtn').disabled = false;
+            document.getElementById('playRecordingBtn').disabled = false;
+
+            document.getElementById('results').style.display = 'block';
+
+            // Scroll to results on mobile
+            if (isMobileDevice()) {
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function playAudio(type) {
+            const buttonId = type === 'Target' ? 'playTargetBtn' : 'playRecordingBtn';
+            const button = document.getElementById(buttonId);
+            const audioUrl = currentAudioUrls[type === 'Target' ? 'target' : 'recording'];
+
+            if(!audioUrl) {
+                alert('No audio available to play');
+                return;
+            }
+
+            // Stop any current playback
+            if(currentPlayback) {
+                fetch('/stop_audio', { method: 'POST' })
+                    .catch(e => console.error('Error stopping audio:', e));
+                clearTimeout(currentPlayback);
+            }
+
+            button.disabled = true;
+            button.textContent = '⏸️ Playing...';
+
+            fetch('/play_audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: audioUrl.split('/').pop(),
+                    language: document.getElementById('language').value
+                })
+            })
+            .then(response => {
+                if(!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if(data.status !== 'success') {
+                    throw new Error(data.message || 'Playback failed');
+                }
+
+                // Get audio duration from backend
+                const duration = data.duration || 5000;
+
+                currentPlayback = setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = `▶️ ${type}`;
+                    currentPlayback = null;
+                }, duration + 500); // Add small buffer
+            })
+            .catch(error => {
+                console.error('Playback error:', error);
+                button.disabled = false;
+                button.textContent = `▶️ ${type}`;
+                alert(`Failed to play ${type.toLowerCase()} audio: ${error.message}`);
+            });
+        }
+    </script>
+</body>
+</html>
