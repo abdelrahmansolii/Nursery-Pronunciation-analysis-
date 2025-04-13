@@ -296,7 +296,7 @@ class PronunciationCoach:
         # More realistic accuracy thresholds
         if accuracy > 95:
             return "🌟 Excellent pronunciation! Perfect match!" if self.current_language == "en" else "🌟 ممتاز! تطابق تام في النطق"
-        elif accuracy > 85:
+        elif accuracy > 90:
             base_feedback = "Good, but needs work:" if self.current_language == "en" else "جيد، ولكن يحتاج تحسينًا:"
         else:
             base_feedback = "Needs practice:" if self.current_language == "en" else "يحتاج تدريبًا:"
