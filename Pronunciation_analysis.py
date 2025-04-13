@@ -366,9 +366,9 @@ class PronunciationCoach:
         self.accuracy_bar["value"] = accuracy
         self.accuracy_label.config(text=f"Accuracy: {accuracy:.1f}%")
 
-        if accuracy > 70:
+        if accuracy > 85:
             self.accuracy_bar["style"] = "green.Horizontal.TProgressbar"
-        elif accuracy > 40:
+        elif accuracy > 65:
             self.accuracy_bar["style"] = "yellow.Horizontal.TProgressbar"
         else:
             self.accuracy_bar["style"] = "red.Horizontal.TProgressbar"
