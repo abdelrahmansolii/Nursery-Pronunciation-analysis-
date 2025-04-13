@@ -139,7 +139,7 @@ def generate_feedback(target, actual, accuracy, language):
     # Adjusted thresholds for more realistic feedback
     if accuracy > 95:
         return "🌟 Excellent pronunciation! Perfectly said!" if language == "en" else "🌟 ممتاز! النطق واضح وصحيح تمامًا"
-    elif accuracy > 85:
+    elif accuracy > 90:
         base_feedback = "Good, but needs slight improvement:" if language == "en" else "جيد، ولكن يحتاج تحسينًا بسيطًا:"
     else:
         base_feedback = "Needs improvement:" if language == "en" else "يحتاج تحسينًا:"
